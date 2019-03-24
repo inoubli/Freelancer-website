@@ -2,16 +2,16 @@
 
 namespace App\DataFixtures;
 
-use App\Entity\BlogPost;
-use App\Entity\Comment;
+use App\Entity\Project;
+use App\Entity\Offer;
 use App\Entity\User;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\Persistence\ObjectManager;
 use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 
-class AppFixtures extends Fixture
-{
-    /**
+class AppFixtures extends Fixture{
+
+    /**{
      * @var UserPasswordEncoderInterface
      */
     private $passwordEncoder;
@@ -25,44 +25,62 @@ class AppFixtures extends Fixture
         [
             'username' => 'admin',
             'email' => 'admin@blog.com',
-            'name' => 'Piotr Jura',
+            'tel' => '22314753',
+            'pays' => 'TUNISIE',
             'password' => 'secret123#',
-            'roles' => [User::ROLE_SUPERADMIN]
+            'type' => 0,
+            'note' => 0,
+            'roles' => [User::ROLE_ADMIN]
         ],
         [
             'username' => 'john_doe',
             'email' => 'john@blog.com',
-            'name' => 'John Doe',
+            'tel' => '97888745',
+            'pays' => 'TUNISIE',
             'password' => 'secret123#',
-            'roles' => [User::ROLE_ADMIN]
+            'type' => 1,
+            'note' => 0,
+            'roles' => [User::ROLE_PUBLISHER]
         ],
         [
             'username' => 'rob_smith',
             'email' => 'rob@blog.com',
-            'name' => 'Rob Smith',
+            'tel' => '97947712',
+            'pays' => 'TUNISIE',
             'password' => 'secret123#',
-            'roles' => [User::ROLE_WRITER]
+            'type' => 1,
+            'note' => 0,
+            'roles' => [User::ROLE_PUBLISHER]
         ],
         [
             'username' => 'jenny_rowling',
             'email' => 'jenny@blog.com',
-            'name' => 'Jenny Rowling',
+            'tel' => '55471644',
+            'pays' => 'TUNISIE',
             'password' => 'secret123#',
-            'roles' => [User::ROLE_WRITER]
+            'type' => 2,
+            'note' => 0,
+            'roles' => [User::ROLE_PUBLISHER]
         ],
         [
             'username' => 'han_solo',
             'email' => 'han@blog.com',
-            'name' => 'Han Solo',
+            'tel' => '96789447',
+            'pays' => 'TUNISIE',
             'password' => 'secret123#',
-            'roles' => [User::ROLE_EDITOR]
+            'type' => 2,
+            'note' => 0,
+            'roles' => [User::ROLE_FREELANCER]
         ],
         [
             'username' => 'jedi_knight',
             'email' => 'jedi@blog.com',
-            'name' => 'Jedi Knight',
+            'tel' => '21223515',
+            'pays' => 'TUNISIE',
             'password' => 'secret123#',
-            'roles' => [User::ROLE_COMMENTATOR]
+            'type' => 2,
+            'note' => 0,
+            'roles' => [User::ROLE_FREELANCER]
         ]];
     public function __construct(UserPasswordEncoderInterface $passwordEncoder)
     {
@@ -73,48 +91,53 @@ class AppFixtures extends Fixture
     public function load(ObjectManager $manager)
     {
         $this->loadUsers($manager);
-        $this->loadBlogPosts($manager);
-        $this->loadComments($manager);
+        $this->loadProjects($manager);
+        $this->loadOffers($manager);
 
     }
 
-    public function loadBlogPosts(ObjectManager $manager){
+    public function loadProjects(ObjectManager $manager){
 
-        $user = $this->getReference('user_admin');
+        //$user = $this->getReference('user_admin');
 
         for ($i = 0 ; $i < 100; $i++){
-            $blogPost = new BlogPost();
-            $blogPost->setTitle($this->faker->realText(30));
-            $blogPost->setContent($this->faker->realText());
-            $blogPost->setPublished($this->faker->dateTimeThisYear);
+            $project = new Project();
+            $project->setTitle($this->faker->realText(30));
+            $project->setDescription($this->faker->realText());
+            $project->setBudget($this->faker->numberBetween(150,10000));
+            $project->setStatus($this->faker->numberBetween(0,2));
+            $project->setPublished($this->faker->dateTimeThisYear);
 
-            $authorReference = $this->getRandomUserReference($blogPost);
+            $authorReference = $this->getRandomUserReference($project);
 
 
-            $blogPost->setAuthor($authorReference);
-            $blogPost->setSlug($this->faker->slug);
+            $project->setAuthor($authorReference);
 
-            $this->setReference("blog_post_$i", $blogPost);
+            $this->setReference("project_$i", $project);
 
-            $manager->persist($blogPost);
+            $manager->persist($project);
         }
 
         $manager->flush();
     }
 
-    public function loadComments(ObjectManager $manager){
+    public function loadOffers(ObjectManager $manager){
         for ($i = 0 ; $i < 100; $i++){
-            for ($j = 0 ; $j< rand(1,10); $j++) {
-                $comment = new Comment();
-                $comment->setPublished($this->faker->dateTimeThisYear());
-                $comment->setContent($this->faker->realText());
+            for ($j = 0 ; $j< rand(1,3); $j++) {
+                $offer = new Offer();
+                $offer->setPrice($this->faker->numberBetween(150,10000));
+                $offer->setPeriod($this->faker->word());
+                $offer->setDescription($this->faker->realText());
+                $offer->setFilename($this->faker->imageUrl(150,150,'cats'));
+                $offer->setPublished($this->faker->dateTimeThisYear());
+                $offer->setStatus($this->faker->word());
 
-                $authorReference = $this->getRandomUserReference($comment);
+                $authorReference = $this->getRandomUserReference($offer);
 
-                $comment->setAuthor($authorReference);
-                $comment->setBlogPost($this->getReference("blog_post_$i"));
+                $offer->setAuthor($authorReference);
+                $offer->setProject($this->getReference("project_$i"));
 
-                $manager->persist($comment);
+                $manager->persist($offer);
 
             }
         }
@@ -128,11 +151,15 @@ class AppFixtures extends Fixture
             $user = new User();
             $user->setUsername($userFixture['username']);
             $user->setEmail($userFixture['email']);
-            $user->setName($userFixture['name']);
+            $user->setTel($userFixture['tel']);
+            $user->setPays($userFixture['pays']);
+            $user->setNote($userFixture['note']);
 
             $user->setPassword(
                 $this->passwordEncoder->encodePassword($user,($userFixture['password']))
             );
+
+            $user->setType($userFixture['type']);
             $user->setRoles($userFixture['roles']);
 
             $this->addReference('user_' . $userFixture['username'],$user);
@@ -148,26 +175,23 @@ class AppFixtures extends Fixture
     {
         $randomUser = self::USERS[rand(0,5)];
         //Reccursive condition,
-        //Stop Condition when creating a BlogPost: $randomUser haven't one of the roles SUPERADMIN,ADMIN,WRITER
-        if ($entity instanceof BlogPost && !count(array_intersect(
+        //Stop Condition when creating a Project: $randomUser haven't one of the roles ADMIN,PUBLISHER
+        if ($entity instanceof Project && !count(array_intersect(
                 $randomUser['roles'],
                 [
-                    User::ROLE_SUPERADMIN,
                     User::ROLE_ADMIN,
-                    User::ROLE_WRITER
+                    User::ROLE_PUBLISHER
                 ]
             ))){
             return $this->getRandomUserReference($entity);
         }
         //Reccursive condition,
-        //Stop Condition when creating a Comment: $randomUser haven't one of the roles SUPERADMIN,ADMIN,WRITER,COMMENTATOR
-        if ($entity instanceof Comment && !count(array_intersect(
+        //Stop Condition when creating an Offer: $randomUser haven't one of the roles ADMIN,FREELANCER
+        if ($entity instanceof Offer && !count(array_intersect(
                 $randomUser['roles'],
                 [
-                    User::ROLE_SUPERADMIN,
-                    User::ROLE_ADMIN,
-                    User::ROLE_COMMENTATOR,
-                    User::ROLE_WRITER,
+                    //User::ROLE_ADMIN,
+                    User::ROLE_FREELANCER
                 ]
             ))){
             return $this->getRandomUserReference($entity);

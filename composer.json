@@ -66,6 +66,7 @@
         "doctrine/doctrine-fixtures-bundle": "^3.1",
         "fzaninotto/faker": "^1.8",
         "symfony/maker-bundle": "^1.11",
-        "symfony/web-server-bundle": "4.2.*"
+        "symfony/web-server-bundle": "4.2.*",
+        "nelmio/cors-bundle": "^1.4"
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use ApiPlatform\Core\Annotation\ApiResource;
+use ApiPlatform\Core\Annotation\ApiSubresource;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
@@ -17,11 +18,11 @@ use Symfony\Component\Validator\Constraints as Assert;
  *          "get"={
  *              "access_control"="is_granted('IS_AUTHENTICATED_FULLY')",
  *               "normalization_context"={
- *                      "groups"={"get"}
+ *                      "groups"={"get","get-user-with-projects"}
  *               }
  *           },
  *           "put"={
- *              "access_control" = " is_granted('IS_AUTHENTICATED_FULLY') and object === user",
+ *              "access_control" = " is_granted('IS_AUTHENTICATED_FULLY') and ( object === user or user.getRoles() === ['ROLE_ADMIN'] )",
  *               "denormalization_context"={
  *                      "groups"={"put"}
  *               },
@@ -48,13 +49,12 @@ use Symfony\Component\Validator\Constraints as Assert;
  */
 class User implements UserInterface
 {
-    const ROLE_COMMENTATOR = 'ROLE_COMMENTATOR';
-    const ROLE_WRITER = 'ROLE_WRITER';
-    const ROLE_EDITOR = 'ROLE_EDITOR';
-    const ROLE_ADMIN = 'ROLE_ADMIN';
-    const ROLE_SUPERADMIN = 'ROLE_SUPERADMIN';
 
-    const DEFAULT_ROLES = [self::ROLE_COMMENTATOR];
+    const ROLE_ADMIN = 'ROLE_ADMIN';
+    const ROLE_PUBLISHER = 'ROLE_PUBLISHER';
+    const ROLE_FREELANCER = 'ROLE_FREELANCER';
+
+    const DEFAULT_ROLES = [self::ROLE_FREELANCER];
     /**
      * @ORM\Id()
      * @ORM\GeneratedValue()
@@ -65,11 +65,35 @@ class User implements UserInterface
 
     /**
      * @ORM\Column(type="string", length=255)
-     * @Groups({"get","post","get-comment-with-author","get-blog-post-with-author"})
+     * @Groups({"get","post","get-offer-with-author","get-project-with-author","get-user-with-projects"})
      * @Assert\NotBlank()
      * @Assert\Length(min=6, max=255)
      */
     private $username;
+
+    /**
+     * @ORM\Column(type="string", length=254)
+     * @Groups({"post","put"})
+     * @Assert\NotBlank()
+     * @Assert\Email()
+     * @Assert\Length(min=6, max=255)
+     */
+    private $email;
+
+    /**
+     * @ORM\Column(type="string", length=15)
+     * @Groups({"get","post","put","get-offer-with-author","get-project-with-author","get-user-with-projects"})
+     * @Assert\NotBlank()
+     * @Assert\Length(min=8, max=8)
+     */
+    private $tel;
+
+    /**
+     * @ORM\Column(type="string", length=15, options={"default": "TUNISIE"})
+     * @Groups({"get","post","put","get-offer-with-author","get-project-with-author","get-user-with-projects"})
+     * @Assert\Length(min=4, max=15)
+     */
+    private $pays;
 
     /**
      * @ORM\Column(type="string", length=255)
@@ -93,45 +117,59 @@ class User implements UserInterface
     private $retypedPassword;
 
     /**
-     * @ORM\Column(type="string", length=255)
-     * @Groups({"get","post","put","get-comment-with-author","get-blog-post-with-author"})
+     * @ORM\Column(type="smallint", length=1)
+     * @Groups({"get","post","put","get-offer-with-author","get-project-with-author","get-user-with-projects"})
      * @Assert\NotBlank()
-     * @Assert\Length(min=6, max=255)
+     * @Assert\Length(min=1, max=1)
      */
-    private $name;
+    private $type;
 
     /**
-     * @ORM\Column(type="string", length=255)
-     * @Groups({"post","put"})
+     * @ORM\Column(type="smallint", length=2, options={"default": 0})
+     * @Groups({"put","get","get-offer-with-author","get-project-with-author","get-user-with-projects"})
      * @Assert\NotBlank()
-     * @Assert\Email()
-     * @Assert\Length(min=6, max=255)
+     * @Assert\Length(min=1, max=2)
      */
-    private $email;
-
-    /**
-     * @ORM\OneToMany(targetEntity="App\Entity\BlogPost", mappedBy="author")
-     * @Groups({"get"})
-     */
-    private $posts;
-
-    /**
-     * @ORM\OneToMany(targetEntity="App\Entity\Comment", mappedBy="author")
-     * @Groups({"get"})
-     */
-    private $comments;
+    private $note;
 
     /**
      * @ORM\Column(type="simple_array", length=200)
      */
     private $roles;
 
+    /**
+     * @ORM\OneToMany(targetEntity="App\Entity\Project", mappedBy="author", orphanRemoval=true)
+     * @ApiSubresource()
+     * @Groups({"get","get-user-with-projects"})
+     */
+    private $projects;
+
+    /**
+     * @ORM\OneToMany(targetEntity="App\Entity\Offer", mappedBy="author", orphanRemoval=true)
+     */
+    private $offers;
+
+
+
+
+
+
+//
+//    /**
+//     * @ORM\OneToMany(targetEntity="App\Entity\Comment", mappedBy="author")
+//     * @Groups({"get"})
+//     */
+//    //private $comments;
+
+
+
     public function __construct()
     {
-       $this->posts = new ArrayCollection();
-       $this->comments = new ArrayCollection();
-       $this->roles = self::DEFAULT_ROLES;
 
+
+        $this->roles = self::DEFAULT_ROLES;
+        $this->projects = new ArrayCollection();
+        $this->offers = new ArrayCollection();
 
     }
 
@@ -152,32 +190,6 @@ class User implements UserInterface
         return $this;
     }
 
-    public function getPassword(): ?string
-    {
-        return $this->password;
-    }
-
-    public function setPassword(string $password): self
-    {
-        $this->password = $password;
-
-        return $this;
-    }
-
-
-
-    public function getName(): ?string
-    {
-        return $this->name;
-    }
-
-    public function setName(string $name): self
-    {
-        $this->name = $name;
-
-        return $this;
-    }
-
     public function getEmail(): ?string
     {
         return $this->email;
@@ -191,20 +203,89 @@ class User implements UserInterface
     }
 
     /**
-     * @return ArrayCollection|Collection
+     * @return mixed
      */
-    public function getPosts()
+    public function getTel()
     {
-        return $this->posts;
+        return $this->tel;
     }
 
+    /**
+     * @param mixed $tel
+     */
+    public function setTel($tel): void
+    {
+        $this->tel = $tel;
+    }
 
     /**
-     * @return ArrayCollection|Collection
+     * @return mixed
      */
-    public function getComments()
+    public function getPays()
     {
-        return $this->comments;
+        return $this->pays;
+    }
+
+    /**
+     * @param mixed $pays
+     */
+    public function setPays($pays): void
+    {
+        $this->pays = $pays;
+    }
+
+    public function getPassword(): ?string
+    {
+        return $this->password;
+    }
+
+    public function setPassword(string $password): self
+    {
+        $this->password = $password;
+
+        return $this;
+    }
+
+    public function getRetypedPassword()
+    {
+        return $this->retypedPassword;
+    }
+
+    public function setRetypedPassword($retypedPassword): void
+    {
+        $this->retypedPassword = $retypedPassword;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getType()
+    {
+        return $this->type;
+    }
+
+    /**
+     * @param mixed $type
+     */
+    public function setType($type): void
+    {
+        $this->type = $type;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getNote()
+    {
+        return $this->note;
+    }
+
+    /**
+     * @param mixed $note
+     */
+    public function setNote($note): void
+    {
+        $this->note = $note;
     }
 
 
@@ -255,14 +336,75 @@ class User implements UserInterface
     }
 
 
-    public function getRetypedPassword()
+    public function __toString() : string
     {
-        return $this->retypedPassword;
+        return $this->username;
     }
 
-    public function setRetypedPassword($retypedPassword): void
+
+    /**
+     * @return ArrayCollection|Collection
+     */
+    public function getOffers()
     {
-        $this->retypedPassword = $retypedPassword;
+        return $this->offers;
+    }
+
+    public function addOffer(Offer $offer): self
+    {
+        if (!$this->offers->contains($offer)) {
+            $this->offers[] = $offer;
+            $offer->setAuthor($this);
+        }
+
+        return $this;
+    }
+
+    public function removeOffer(Offer $offer): self
+    {
+        if ($this->offers->contains($offer)) {
+            $this->offers->removeElement($offer);
+            // set the owning side to null (unless already changed)
+            if ($offer->getAuthor() === $this) {
+                $offer->setAuthor(null);
+            }
+        }
+
+        return $this;
+    }
+
+
+
+
+    /**
+     * @return ArrayCollection|Collection
+     */
+    public function getProjects()
+    {
+        return $this->projects;
+    }
+
+    public function addProject(Project $project): self
+    {
+        if (!$this->projects->contains($project)) {
+            $this->projects[] = $project;
+            $project->setAuthor($this);
+        }
+
+        return $this;
+    }
+
+    public function removeProject(Project $project): self
+    {
+        if ($this->projects->contains($project)) {
+            $this->projects->removeElement($project);
+            // set the owning side to null (unless already changed)
+            if ($project->getAuthor() === $this) {
+                $project->setAuthor(null);
+            }
+        }
+
+        return $this;
     }
 
 
