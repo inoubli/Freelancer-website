@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Core\Annotation\ApiProperty;
 use ApiPlatform\Core\Annotation\ApiResource;
 use ApiPlatform\Core\Annotation\ApiSubresource;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -11,6 +12,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints\Collection;
 use Symfony\Component\Validator\Constraints as Assert;
+
 
 /**
  * @ApiResource(
@@ -125,10 +127,8 @@ class User implements UserInterface
     private $type;
 
     /**
-     * @ORM\Column(type="smallint", length=2, options={"default": 0})
+     * @ORM\Column(type="smallint", length=1)
      * @Groups({"put","get","get-offer-with-author","get-project-with-author","get-user-with-projects"})
-     * @Assert\NotBlank()
-     * @Assert\Length(min=1, max=2)
      */
     private $note;
 
@@ -140,7 +140,7 @@ class User implements UserInterface
     /**
      * @ORM\OneToMany(targetEntity="App\Entity\Project", mappedBy="author", orphanRemoval=true)
      * @ApiSubresource()
-     * @Groups({"get","get-user-with-projects"})
+     * @Groups({"get","get-user-with-projects","media_object_read"})
      */
     private $projects;
 
@@ -148,6 +148,16 @@ class User implements UserInterface
      * @ORM\OneToMany(targetEntity="App\Entity\Offer", mappedBy="author", orphanRemoval=true)
      */
     private $offers;
+
+    /**
+     * @var MediaObject|null
+     *
+     * @ORM\ManyToOne(targetEntity=MediaObject::class)
+     * @ORM\JoinColumn(nullable=true)
+     * @ApiProperty(iri="http://localhost:8000/api/image")
+     * @Groups({"put","get","get-offer-with-author","get-project-with-author","get-user-with-projects"})
+     */
+    public $image;
 
 
 
